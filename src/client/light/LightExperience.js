@@ -17,7 +17,7 @@ const template = `
 
 const model = { title: `` };
 
-class PlayerExperience extends soundworks.Experience {
+class LightExperience extends soundworks.Experience {
   constructor(assetsDomain) {
     super();
 
@@ -42,7 +42,7 @@ class PlayerExperience extends soundworks.Experience {
     });
 
     this.show().then(() => {
-      this.renderer = new LightRenderer();
+      this.renderer = new LightRenderer(client.color);
       this.view.addRenderer(this.renderer);
       this.view.setPreRender(function(ctx, dt, canvasWidth, canvasHeight) {
         ctx.fillStyle = '#000';
@@ -56,30 +56,20 @@ class PlayerExperience extends soundworks.Experience {
       surface.addListener('touchstart', this.onTouchStart);
       surface.addListener('touchmove', this.onTouchMove);
       surface.addListener('touchend', this.onTouchEnd);
-
       this.surface = surface;
     });
-  }
 
-  startLight(x, y) {
-    const rect = this.view.$el.getBoundingClientRect();
-    const squareSize = Math.min(rect.width, rect.height);
-    const xMin = 0.5 * (rect.width - squareSize);
-    const yMin = 0.5 * (rect.height - squareSize);
-    const normX = Math.max(0, Math.min(1, (x - xMin) / squareSize));
-    const normY = Math.max(0, Math.min(1, (y - yMin) / squareSize));
-
-    this.renderer.startLight(normX, normY, client.color);
-    this.send('start-light', client.index, normX, normY, client.color);
+    this.send('add-light', client.index, client.color);
+    this.sharedParams.addParamListener('reload', () => window.location.reload(true));
   }
 
   moveLight(x, y) {
     const rect = this.view.$el.getBoundingClientRect();
     const squareSize = Math.min(rect.width, rect.height);
-    const xMin = 0.5 * (rect.width - squareSize);
-    const yMin = 0.5 * (rect.height - squareSize);
-    const normX = Math.max(0, Math.min(1, (x - xMin) / squareSize));
-    const normY = Math.max(0, Math.min(1, (y - yMin) / squareSize));
+    const xCenter = 0.5 * rect.width;
+    const yCenter = 0.5 * rect.height;
+    const normX = Math.max(-0.5, Math.min(0.5, (x - xCenter) / squareSize));
+    const normY = Math.max(-0.5, Math.min(0.5, (y - yCenter) / squareSize));
 
     this.renderer.moveLight(normX, normY);
     this.send('move-light', client.index, normX, normY);
@@ -90,19 +80,19 @@ class PlayerExperience extends soundworks.Experience {
     this.send('stop-light', client.index);
   }
 
-  onTouchStart(id, normX, normY) {
+  onTouchStart(id, x, y) {
     if (this.touchId === null) {
-      this.startLight(normX, normY);
+      this.moveLight(x, y);
       this.touchId = id;
     }
   }
 
-  onTouchMove(id, normX, normY) {
+  onTouchMove(id, x, y) {
     if (id === this.touchId)
-      this.moveLight(normX, normY);
+      this.moveLight(x, y);
   }
 
-  onTouchEnd(id, normX, normY) {
+  onTouchEnd(id, x, y) {
     if (id === this.touchId) {
       this.stopLight();
       this.touchId = null;
@@ -110,4 +100,4 @@ class PlayerExperience extends soundworks.Experience {
   }
 }
 
-export default PlayerExperience;
+export default LightExperience;

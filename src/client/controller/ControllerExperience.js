@@ -19,6 +19,12 @@ class ControllerExperience extends Experience {
 
     if (options.auth)
       this.auth = this.require('auth');
+
+    this.setGuiOptions('formRatio', { type: 'slider', size: 'large' });
+    this.setGuiOptions('directIntensity', { type: 'slider', size: 'large' });
+    this.setGuiOptions('strayIntensity', { type: 'slider', size: 'large' });
+    this.setGuiOptions('screenDistance', { type: 'slider', size: 'large' });
+    this.setGuiOptions('rehearsalLight', { type: 'slider', size: 'large' });
   }
 
   start() {

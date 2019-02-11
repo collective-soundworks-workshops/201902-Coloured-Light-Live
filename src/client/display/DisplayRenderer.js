@@ -1,194 +1,141 @@
 import { Canvas2dRenderer } from 'soundworks/client';
+import Square from '../shared/Square';
+import Light from '../shared/Light';
+import Form from '../shared/Form';
 
-const fadeInTime = 1;
-const fadeOutTime = 1;
-
-function getTime() {
-  return 0.001 * performance.now();
-}
-
-class Light {
-  constructor(id, x, y, color) {
-    this.id = id;
-    this.x = x;
-    this.y = y;
-    this.color = color;
-    this.opacity = 0;
-    this.active = true;
-    this.time = getTime();
-  }
-
-  update(time) {
-    const delta = time - this.time;
-
-    if (this.active) {
-      if (delta < fadeInTime)
-        this.opacity = delta / fadeInTime;
-      else
-        this.opacity = 1;
-    } else {
-      if (delta < fadeOutTime)
-        this.opacity = 1 - delta / fadeOutTime;
-      else
-        return false;
-    }
-
-    return true;
-  }
-
-  start(time) {
-    this.time = time;
-  }
-
-  move(x, y) {
-    this.x = x;
-    this.y = y;
-  }
-
-  stop(time) {
-    this.time = time - (fadeOutTime - this.opacity * fadeOutTime);
-    this.active = false;
-  }
-}
-
-class Form {
-  constructor(id, x, y) {
-    this.id = id;
-    this.x = x;
-    this.y = y;
-    this.size = 1;
-  }
-}
-
-/**
- * A simple canvas renderer.
- * The class renders a dot moving over the screen and rebouncing on the edges.
- */
-class LightRenderer extends Canvas2dRenderer {
+class DisplayRenderer extends Canvas2dRenderer {
   constructor() {
     super();
 
     this.x = null;
     this.y = null;
 
-    this.activeLights = new Map();
-    this.inactiveLights = new Set();
+    this.square = new Square();
+    this.lights = new Map();
+    this.forms = new Map();
 
-    this.activeForms = new Map();
+    this.rehearsalLight = new Light('#fff', 0, 0);
 
-    const form0 = new Form(0, 0.2, 0.2);
-    const form1 = new Form(1, 0.7, 0.5);
-    this.activeForms.set(0, form0);
-    this.activeForms.set(1, form1);
+    this.projectionParams = {
+      formRatio: 0.1,
+      directIntensity: 0.4,
+      strayIntensity: 0.2,
+      screenDistance: 0.1,
+    };
   }
 
-  init() {}
-
-  getLightById(id) {
-    let light = this.activeLights.get(id);
-
-    return light;
+  onResize(canvasWidth, canvasHeight, orientation) {
+    super.onResize(canvasWidth, canvasHeight, orientation);
+    this.square.resize(canvasWidth, canvasHeight);
   }
 
-  startLight(id, x, y, color) {
-    const light = new Light(id, x, y, color);
+  addLight(id, color, x, y) {
+    const light = new Light(color, x, y);
+    this.lights.set(id, light);
+  }
 
-    const time = getTime();
-    light.start(time);
-
-    this.activeLights.set(id, light);
+  removeLight(id) {
+    this.lights.delete(id);
   }
 
   moveLight(id, x, y) {
-    const light = this.getLightById(id);
+    const light = this.lights.get(id);
 
-    if (light)
-      light.move(x, y);
+    if (light) {
+      light.x = x;
+      light.y = y;
+
+      if (!light.active)
+        light.start();
+    }
   }
 
   stopLight(id) {
-    const light = this.getLightById(id);
+    const light = this.lights.get(id);
 
-    if (light) {
-      const time = getTime();
-      light.stop(time);
+    if (light)
+      light.stop();
+  }
 
-      this.activeLights.delete(id);
-      this.inactiveLights.add(light);
-    }
+  addForm(id, type, x, y, size, shutterIncl, leftShutter, rightShutter) {
+    const form = new Form(type);
+    form.x = x;
+    form.y = y;
+    form.size = size;
+    form.shutterIncl = shutterIncl;
+    form.leftShutter = leftShutter;
+    form.rightShutter = rightShutter;
+
+    this.forms.set(id, form);
+  }
+
+  removeForm(id) {
+    this.forms.delete(id);
+  }
+
+  setPosition(id, x, y) {
+    const form = this.forms.get(id);
+
+    if (form)
+      form.setPosition(x, y);
+  }
+
+  setSizeAndRotation(id, size, rotation) {
+    const form = this.forms.get(id);
+
+    if (form)
+      form.setSizeAndRotation(size, rotation);
+  }
+
+  setShutterIncl(id, incl) {
+    const form = this.forms.get(id);
+
+    if (form)
+      form.setShutterIncl(incl);
+  }
+
+  setLeftShutter(id, dist) {
+    const form = this.forms.get(id);
+
+    if (form)
+      form.setLeftShutter(dist);
+  }
+
+  setRightShutter(id, dist) {
+    const form = this.forms.get(id);
+
+    if (form)
+      form.setRightShutter(dist);
   }
 
   update(dt) {
-    const time = getTime();
-
-    for (let [id, light] of this.activeLights)
-      light.update(time);
-
-    for (let light of this.inactiveLights) {
-      const cont = light.update(time);
-
-      if (!cont)
-        this.inactiveLights.delete(light);
-    }
-  }
-
-  renderLightThroughForm(ctx, light, form) {
-    const width = this.canvasWidth;
-    const height = this.canvasHeight;
-    const squareSize = Math.min(width, height);
-    const xMin = 0.5 * (width - squareSize);
-    const yMin = 0.5 * (height - squareSize);
-    const normX = form.x - 0.2 * (light.x - form.x);
-    const normY = form.y - 0.2 * (light.y - form.y);
-    const x = xMin + normX * squareSize;
-    const y = yMin + normY * squareSize;
-
-    ctx.fillStyle = light.color;
-    ctx.globalAlpha = 0.25 * light.opacity;
-    ctx.globalCompositeOperation = 'screen';
-
-    ctx.beginPath();
-    ctx.arc(x, y, 100, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.closePath();
-  }
-
-  renderScatteredLight(ctx, light) {
-    const width = this.canvasWidth;
-    const height = this.canvasHeight;
-    const squareSize = Math.min(width, height);
-    const xMin = 0.5 * (width - squareSize);
-    const yMin = 0.5 * (height - squareSize);
-    const x = xMin + light.x * squareSize;
-    const y = yMin + light.y * squareSize;
-
-    ctx.globalAlpha = 0.2 * light.opacity;
-
-    const gradient = ctx.createRadialGradient(x, y, 10, 0.5 * width, 0.5 * height, 0.707 * squareSize);
-    gradient.addColorStop(0, light.color);
-    gradient.addColorStop(1, '#000');
-    ctx.fillStyle = gradient;
-
-    ctx.fillRect(xMin, yMin, squareSize, squareSize);
+    for (let [id, light] of this.lights)
+      light.update(dt);
   }
 
   render(ctx) {
-    for (let [id, light] of this.activeLights) {
-      this.renderScatteredLight(ctx, light);
+    const square = this.square;
+    const projectionParams = this.projectionParams;
+    const formRatio = projectionParams.formRatio;
+    const directIntensity = projectionParams.directIntensity;
+    const strayIntensity = projectionParams.strayIntensity;
+    const screenDistance = projectionParams.screenDistance;
 
-      for (let [id, form] of this.activeForms) {
-        this.renderLightThroughForm(ctx, light, form);
+    for (let [id, light] of this.lights) {
+      for (let [id, form] of this.forms) {
+        light.renderOpening(ctx, square, form, formRatio, directIntensity, strayIntensity, screenDistance);
       }
     }
 
-    for (let light of this.inactiveLights) {
-      this.renderScatteredLight(ctx, light);
-
-      for (let [id, form] of this.activeForms) {
-        this.renderLightThroughForm(ctx, light, form);
+    const rehearsalLight = this.rehearsalLight;
+    if (rehearsalLight.intensity > 0) {
+      for (let [id, form] of this.forms) {
+        rehearsalLight.renderOpening(ctx, square, form, formRatio, 1, 0, 0);
       }
     }
+
+    square.renderMargins(ctx);
   }
 }
 
-export default LightRenderer;
+export default DisplayRenderer;

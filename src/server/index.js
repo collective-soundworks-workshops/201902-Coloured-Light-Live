@@ -39,9 +39,17 @@ soundworks.server.setClientConfigDefinition((clientType, config, httpRequest) =>
 
 const sharedParams = soundworks.server.require('shared-params');
 sharedParams.addText('numPlayers', '# players', '0');
-sharedParams.addTrigger('reloadDisplay', 'reload display');
+sharedParams.addText('numLights', '# lights', '0');
+sharedParams.addText('numForms', '# forms', '0');
+sharedParams.addNumber('formRatio', 'form ratio', 0, 1, 0.01, 0.1);
+sharedParams.addNumber('directIntensity', 'direct intensity', 0, 1, 0.01, 0.4);
+sharedParams.addNumber('strayIntensity', 'stray intensity', 0, 1, 0.01, 0.2);
+sharedParams.addNumber('screenDistance', 'screen distance', 0, 1, 0.01, 0.1);
+sharedParams.addNumber('rehearsalLight', 'rehearsal light', 0, 1, 0.01, 0);
+sharedParams.addTrigger('reload', 'reload all clients');
 
-const player = new PlayerExperience();
+const light = new PlayerExperience('light');
+const form = new PlayerExperience('form');
 const display = new DisplayExperience();
 const controller = new ControllerExperience();
 

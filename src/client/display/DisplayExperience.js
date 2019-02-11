@@ -24,10 +24,11 @@ class DisplayExperience extends soundworks.Experience {
     this.platform = this.require('platform', { showDialog: false });
     this.sharedParams = this.require('shared-params');
 
-    this.onStartLight = this.onStartLight.bind(this);
-    this.onMoveLight = this.onMoveLight.bind(this);
-    this.onStopLight = this.onStopLight.bind(this);
-    this.onReloadDisplay = this.onReloadDisplay.bind(this);
+    this.updateFormRatio = this.updateFormRatio.bind(this);
+    this.updateDirectIntensity = this.updateDirectIntensity.bind(this);
+    this.updateStrayIntensity = this.updateStrayIntensity.bind(this);
+    this.updateScreenDistance = this.updateScreenDistance.bind(this);
+    this.updateRehearsalLight = this.updateRehearsalLight.bind(this);
   }
 
   start() {
@@ -48,28 +49,47 @@ class DisplayExperience extends soundworks.Experience {
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
       });
 
-      this.receive('start-light', this.onStartLight);
-      this.receive('move-light', this.onMoveLight);
-      this.receive('stop-light', this.onStopLight);
+      this.receive('add-light', (playerId, color, x, y) => this.renderer.addLight(playerId, color, x, y));
+      this.receive('remove-light', (playerId) => this.renderer.removeLight(playerId));
+      this.receive('move-light', (playerId, x, y) => this.renderer.moveLight(playerId, x, y));
+      this.receive('stop-light', (playerId) => this.renderer.stopLight(playerId));
 
-      this.sharedParams.addParamListener('reloadDisplay', this.onReloadDisplay);
+      this.receive('add-form', (playerId, type, x, y, size, shutterIncl, leftShutter, rightShutter) => this.renderer.addForm(playerId, type, x, y, size, shutterIncl, leftShutter, rightShutter));
+      this.receive('remove-form', (playerId) => this.renderer.removeForm(playerId));
+      this.receive('move-form', (playerId, x, y) => this.renderer.setPosition(playerId, x, y));
+      this.receive('adjust-form', (playerId, size, rotation) => this.renderer.setSizeAndRotation(playerId, size, rotation));
+      this.receive('shutter-incl', (playerId, incl) => this.renderer.setShutterIncl(playerId, incl));
+      this.receive('left-shutter', (playerId, dist) => this.renderer.setLeftShutter(playerId, dist));
+      this.receive('right-shutter', (playerId, dist) => this.renderer.setRightShutter(playerId, dist));
+
+      this.sharedParams.addParamListener('formRatio', this.updateFormRatio);
+      this.sharedParams.addParamListener('directIntensity', this.updateDirectIntensity);
+      this.sharedParams.addParamListener('strayIntensity', this.updateStrayIntensity);
+      this.sharedParams.addParamListener('screenDistance', this.updateScreenDistance);
+      this.sharedParams.addParamListener('rehearsalLight', this.updateRehearsalLight);
     });
+
+    this.sharedParams.addParamListener('reload', () => window.location.reload(true));
   }
 
-  onStartLight(playerId, x, y, color) {
-    this.renderer.startLight(playerId, x, y, color);
+  updateFormRatio(value) {
+    this.renderer.projectionParams.formRatio = value;
   }
 
-  onMoveLight(playerId, x, y) {
-    this.renderer.moveLight(playerId, x, y);
+  updateDirectIntensity(value) {
+    this.renderer.projectionParams.directIntensity = value;
   }
 
-  onStopLight(playerId) {
-    this.renderer.stopLight(playerId);
+  updateStrayIntensity(value) {
+    this.renderer.projectionParams.strayIntensity = value;
   }
 
-  onReloadDisplay() {
-    window.location.reload(true);
+  updateScreenDistance(value) {
+    this.renderer.projectionParams.screenDistance = value;
+  }
+
+  updateRehearsalLight(value) {
+    this.renderer.rehearsalLight.intensity = value;
   }
 }
 

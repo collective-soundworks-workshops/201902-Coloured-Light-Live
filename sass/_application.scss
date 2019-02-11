@@ -24,10 +24,9 @@
 }
 
 
-#player {}
+#light {}
 
-#display {
-}
+#display {}
 
 #overlay {
   position: absolute;
@@ -60,19 +59,66 @@
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
+
+    .circle {
+      flex-basis: auto;
+      border-radius: 50%;
+      border: 2px solid #000000;
+      box-sizing: border-box;
+    }
+
+    .color-change {
+      background: url(../images/reload-icon.png) 50% 50% no-repeat;
+      background-size: contain;
+      opacity: 0.9;
+    }
   }
 
-  .circle {
-    flex-basis: auto;
-    border-radius: 50%;
-    border: 2px solid #000000;
-    box-sizing: border-box;
-  }
-
-  .color-change {
-    background: url(../images/reload-icon.png) 50% 50% no-repeat;
+  .shadow {
     background-size: contain;
+    border-color: white;
     opacity: 0.9;
+  }
+}
+
+#service-form-picker {
+  .form-wrapper {
+    display: flex;
+    display: -webkit-flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+
+    .form {
+      flex-basis: auto;
+      box-sizing: border-box;
+      opacity: 0.8;
+
+      &[data-form="circle"] {
+        background: url(../images/form-circle.png) 50% 50% no-repeat;
+        background-size: contain;
+      }
+
+      &[data-form="square"] {
+        background: url(../images/form-square.png) 50% 50% no-repeat;
+        background-size: contain;
+      }
+
+      &[data-form="triangle"] {
+        background: url(../images/form-triangle.png) 50% 50% no-repeat;
+        background-size: contain;
+      }
+
+      &[data-form="rightangle"] {
+        background: url(../images/form-rightangle.png) 50% 50% no-repeat;
+        background-size: contain;
+      }
+
+      &[data-form="cross"] {
+        background: url(../images/form-cross.png) 50% 50% no-repeat;
+        background-size: contain;
+      }
+    }
   }
 
   .shadow {

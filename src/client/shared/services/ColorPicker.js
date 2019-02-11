@@ -3,14 +3,6 @@ import please from 'pleasejs';
 
 const SERVICE_ID = 'service:color-picker';
 
-function colorDistance(color1, color2) {
-  const r = color1.r - color2.r;
-  const g = color1.g - color2.g;
-  const b = color1.b - color2.b;
-
-  return Math.sqrt(r * r + g * g + b * b);
-}
-
 const template = `
   <div class="section-top flex-middle">
     <p class="small">Choose your color</p>
@@ -51,15 +43,9 @@ class ColorPickerView extends SegmentedView {
   onResize(width, height, orientation) {
     super.onResize(width, height, orientation);
 
-    let size;
-    const nbrX = 3;
-    const nbrY = 4;
-
-    // const bcr = this.$colorWrapper.getBoundingClientRect();
-    // const width = bcr.width;
-    // const height = bcr.height;
-
-    size = Math.min(width / nbrX, height / nbrY);
+    const numX = 2;
+    const numY = 3;
+    const size = Math.min((width - 20) / numX, (height - 20) / numY);
 
     this.$circles.forEach(($circle) => {
       $circle.style.width = `${size}px`;
@@ -70,8 +56,8 @@ class ColorPickerView extends SegmentedView {
   _updatePalette() {
     const $circles = this.$circles;
     const numColors = this.model.numColors;
-    let hue = 360 * Math.random();
     const step = 360 / numColors;
+    let hue = step * Math.random();
 
     for (let i = 0; i < numColors; i++) {
       const $circle = $circles[i];
