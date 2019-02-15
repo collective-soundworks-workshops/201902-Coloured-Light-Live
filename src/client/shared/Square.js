@@ -32,6 +32,18 @@ class Square {
     return this.yCenter + normY * this.size;
   }
 
+  renderFrame(ctx, color = '#000000') {
+    const lineRadius = 5;
+    const width = this.width - 2 * (this.xMargin + lineRadius);
+    const height = this.height - 2 * (this.yMargin + lineRadius);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 10;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeRect(this.xMargin + lineRadius, this.yMargin + lineRadius, width, height);
+  }
+
   renderMargins(ctx, color = '#000000') {
     ctx.fillStyle = color;
     ctx.globalAlpha = 1;

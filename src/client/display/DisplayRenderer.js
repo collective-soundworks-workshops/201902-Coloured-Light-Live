@@ -14,14 +14,19 @@ class DisplayRenderer extends Canvas2dRenderer {
     this.lights = new Map();
     this.forms = new Map();
 
-    this.rehearsalLight = new Light('#fff', 0, 0);
+    const rehearsalLight = new Light('#fff', 0, 0);
+    rehearsalLight.intensity = 1;
+    this.rehearsalLight = rehearsalLight;
 
-    this.projectionParams = {
-      formRatio: 0.1,
-      directIntensity: 0.4,
-      strayIntensity: 0.2,
-      screenDistance: 0.1,
-    };
+
+    this.playingMode = false;
+    this.directIntensity = 0.4;
+    this.strayIntensity = 0.2;
+    this.rehearsalLightIntensity = 0.1;
+    this.rehearsalFormIntensity = 0.1;
+    this.formRatio = 0.1;
+    this.screenDistance = 0.1;
+    this.lightFadeTime = 2;
   }
 
   onResize(canvasWidth, canvasHeight, orientation) {
@@ -41,12 +46,12 @@ class DisplayRenderer extends Canvas2dRenderer {
   moveLight(id, x, y) {
     const light = this.lights.get(id);
 
-    if (light) {
+    if (light && (light.active || light.intensity === 0)) {
       light.x = x;
       light.y = y;
 
       if (!light.active)
-        light.start();
+        light.start(this.lightFadeTime);
     }
   }
 
@@ -54,7 +59,7 @@ class DisplayRenderer extends Canvas2dRenderer {
     const light = this.lights.get(id);
 
     if (light)
-      light.stop();
+      light.stop(this.lightFadeTime);
   }
 
   addForm(id, type, x, y, size, shutterIncl, leftShutter, rightShutter) {
@@ -115,26 +120,38 @@ class DisplayRenderer extends Canvas2dRenderer {
 
   render(ctx) {
     const square = this.square;
-    const projectionParams = this.projectionParams;
-    const formRatio = projectionParams.formRatio;
-    const directIntensity = projectionParams.directIntensity;
-    const strayIntensity = projectionParams.strayIntensity;
-    const screenDistance = projectionParams.screenDistance;
 
-    for (let [id, light] of this.lights) {
-      for (let [id, form] of this.forms) {
-        light.renderOpening(ctx, square, form, formRatio, directIntensity, strayIntensity, screenDistance);
-      }
+    switch (this.playingMode) {
+      case 'off':
+        break;
+
+      case 'rehearsal':
+        if (this.rehearsalLightIntensity) {
+          for (let [id, light] of this.lights)
+            light.renderDirect(ctx, square, this.rehearsalLightIntensity, 0, 0.5);
+        }
+
+        if (this.rehearsalFormIntensity > 0) {
+          const rehearsalLight = this.rehearsalLight;
+          for (let [id, form] of this.forms)
+            rehearsalLight.renderOpening(ctx, square, form, this.formRatio, this.rehearsalFormIntensity, 0, 0, false);
+        }
+        break;
+
+      case 'performance':
+        for (let [id, light] of this.lights) {
+          for (let [id, form] of this.forms) {
+            light.renderOpening(ctx, square, form, this.formRatio, this.directIntensity, this.strayIntensity, this.screenDistance, true);
+          }
+        }
+        break;
     }
 
-    const rehearsalLight = this.rehearsalLight;
-    if (rehearsalLight.intensity > 0) {
-      for (let [id, form] of this.forms) {
-        rehearsalLight.renderOpening(ctx, square, form, formRatio, 1, 0, 0);
-      }
-    }
+    const marginColor = this.showFrame ? '#f00' : '#000';
+    square.renderMargins(ctx, marginColor);
 
-    square.renderMargins(ctx);
+    if (this.showFrame)
+      square.renderFrame(ctx, '#0f0');
   }
 }
 

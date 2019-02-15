@@ -8,6 +8,8 @@ class LightRenderer extends Canvas2dRenderer {
 
     this.square = new Square();
     this.light = new Light(color);
+
+    this.lightFadeTime = 2;
   }
 
   onResize(canvasWidth, canvasHeight, orientation) {
@@ -18,15 +20,17 @@ class LightRenderer extends Canvas2dRenderer {
   moveLight(x, y) {
     const light = this.light;
 
-    light.x = x;
-    light.y = y;
+    if (light.active || light.intensity === 0) {
+      light.x = x;
+      light.y = y;
 
-    if (!light.active)
-      light.start();
+      if (!light.active)
+        light.start(this.lightFadeTime);
+    }
   }
 
   stopLight() {
-    this.light.stop();
+    this.light.stop(this.lightFadeTime);
   }
 
   update(dt) {

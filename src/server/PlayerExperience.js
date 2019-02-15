@@ -29,7 +29,7 @@ export default class PlayerExperience extends Experience {
       this.receive(client, 'add-form', (playerId, type, x, y, size, shutterIncl, leftShutter, rightShutter) => this.broadcast('display', null, 'add-form', playerId, type, x, y, size, shutterIncl, leftShutter, rightShutter));
       this.receive(client, 'remove-form', (playerId) => this.broadcast('display', null, 'remove-form', playerId));
       this.receive(client, 'move-form', (playerId, x, y) => this.broadcast('display', null, 'move-form', playerId, x, y));
-      this.receive(client, 'adjust-form', (playerId, size) => this.broadcast('display', null, 'adjust-form', playerId, size));
+      this.receive(client, 'adjust-form', (playerId, size, rotation) => this.broadcast('display', null, 'adjust-form', playerId, size, rotation));
       this.receive(client, 'shutter-incl', (playerId, incl) => this.broadcast('display', null, 'shutter-incl', playerId, incl));
       this.receive(client, 'left-shutter', (playerId, dist) => this.broadcast('display', null, 'left-shutter', playerId, dist));
       this.receive(client, 'right-shutter', (playerId, dist) => this.broadcast('display', null, 'right-shutter', playerId, dist));

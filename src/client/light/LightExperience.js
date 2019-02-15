@@ -7,15 +7,13 @@ const client = soundworks.client;
 const template = `
   <canvas class="background"></canvas>
   <div class="foreground">
-    <div class="section-top flex-middle"></div>
-    <div class="section-center flex-center">
-      <p class="big"><%= title %></p>
+    <div class="section-top flex-middle">
+      <p class="small">light</p>
     </div>
+    <div class="section-center flex-center"></div>
     <div class="section-bottom flex-middle"></div>
   </div>
 `;
-
-const model = { title: `` };
 
 class LightExperience extends soundworks.Experience {
   constructor(assetsDomain) {
@@ -31,24 +29,28 @@ class LightExperience extends soundworks.Experience {
     this.onTouchStart = this.onTouchStart.bind(this);
     this.onTouchMove = this.onTouchMove.bind(this);
     this.onTouchEnd = this.onTouchEnd.bind(this);
+
+    this.updateLightFadeTime = this.updateLightFadeTime.bind(this);
   }
 
   start() {
     super.start();
 
-    this.view = new soundworks.CanvasView(template, model, {}, {
+    this.view = new soundworks.CanvasView(template, {}, {}, {
       id: this.id,
       preservePixelRatio: true,
+      ratios: {
+        '.section-top': 0.12,
+        '.section-center': 0.85,
+        '.section-bottom': 0.03,
+      },
     });
 
     this.show().then(() => {
       this.renderer = new LightRenderer(client.color);
       this.view.addRenderer(this.renderer);
       this.view.setPreRender(function(ctx, dt, canvasWidth, canvasHeight) {
-        ctx.fillStyle = '#000';
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
       });
 
       // setup touch listeners
@@ -57,10 +59,12 @@ class LightExperience extends soundworks.Experience {
       surface.addListener('touchmove', this.onTouchMove);
       surface.addListener('touchend', this.onTouchEnd);
       this.surface = surface;
-    });
 
-    this.send('add-light', client.index, client.color);
-    this.sharedParams.addParamListener('reload', () => window.location.reload(true));
+      this.sharedParams.addParamListener('lightFadeTime', this.updateLightFadeTime);
+      this.sharedParams.addParamListener('reload', () => window.location.reload(true));
+
+      this.send('add-light', client.index, client.color);
+    });
   }
 
   moveLight(x, y) {
@@ -97,6 +101,10 @@ class LightExperience extends soundworks.Experience {
       this.stopLight();
       this.touchId = null;
     }
+  }
+
+  updateLightFadeTime(value) {
+    this.renderer.lightFadeTime = value;
   }
 }
 

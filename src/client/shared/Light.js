@@ -1,6 +1,3 @@
-const fadeInTime = 1;
-const fadeOutTime = 1;
-
 class Light {
   constructor(color, x = 0, y = 0) {
     this.color = color;
@@ -20,31 +17,33 @@ class Light {
       this.slope = 0;
     } else if (!this.active && intensity < 0) {
       intensity = 0;
-      this.slope = 0;      
+      this.slope = 0;
     }
 
     this.intensity = intensity;
   }
 
-  start() {
+  start(fadeTime = 1) {
     this.active = true;
-    this.slope = 1 / fadeInTime;
+    this.slope = 1 / fadeTime;
   }
 
-  stop() {
+  stop(fadeTime = 1) {
     this.active = false;
-    this.slope = -1 / fadeOutTime;
+    this.slope = -1 / fadeTime;
   }
 
-  renderDirect(ctx, square) {
+  renderDirect(ctx, square, directIntensity = 1, center = 1, radius = 0.707) {
     if (this.intensity > 0) {
       const squareSize = square.size;
       const x = square.getX(this.x);
       const y = square.getY(this.y);
 
-      ctx.globalAlpha = this.intensity;
+      ctx.globalAlpha = this.intensity * directIntensity;
 
-      const gradient = ctx.createRadialGradient(x, y, 10, square.xCenter, square.yCenter, 0.707 * squareSize);
+      const xCenter = square.xCenter * center + x * (1 - center);
+      const yCenter = square.yCenter * center + y * (1 - center);
+      const gradient = ctx.createRadialGradient(x, y, 10, xCenter, yCenter, radius * squareSize);
       gradient.addColorStop(0, this.color);
       gradient.addColorStop(1, '#000');
       ctx.fillStyle = gradient;
@@ -53,7 +52,7 @@ class Light {
     }
   }
 
-  renderOpening(ctx, square, form, formRatio, directIntensity, strayIntensity, screenDistance) {
+  renderOpening(ctx, square, form, formRatio, directIntensity, strayIntensity, screenDistance, drawShutters = true) {
     if (this.intensity > 0) {
       const squareSize = square.size;
       const distX = (this.x - form.x);
@@ -66,18 +65,19 @@ class Light {
       const yBlur = square.getY(form.y - 2 * normOffsetY);
       const size = form.size * formRatio * squareSize;
 
-      // render stray light
-      const gradient = ctx.createRadialGradient(xForm, yForm, 1, xBlur, yBlur, squareSize);
-      gradient.addColorStop(0, this.color);
-      gradient.addColorStop(1, '#000');
+      if (strayIntensity > 0) {
+        const gradient = ctx.createRadialGradient(xForm, yForm, 1, xBlur, yBlur, squareSize);
+        gradient.addColorStop(0, this.color);
+        gradient.addColorStop(1, '#000');
 
-      ctx.globalCompositeOperation = 'screen';
-      ctx.globalAlpha = strayIntensity * this.intensity * 0.5 * (form.leftShutter + form.rightShutter);
-      ctx.fillStyle = gradient;
-      ctx.fillRect(square.xMargin, square.yMargin, squareSize, squareSize);
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = strayIntensity * this.intensity * 0.5 * (form.leftShutter + form.rightShutter);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(square.xMargin, square.yMargin, squareSize, squareSize);
+      }
 
-      // render form
-      form.renderResultAtPosition(ctx, square, xForm, yForm, formRatio, this.color, directIntensity * this.intensity, true);
+      if (directIntensity > 0)
+        form.renderResultAtPosition(ctx, square, xForm, yForm, formRatio, this.color, directIntensity * this.intensity, drawShutters);
     }
   }
 

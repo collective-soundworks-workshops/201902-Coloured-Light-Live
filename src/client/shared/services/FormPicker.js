@@ -3,11 +3,11 @@ import please from 'pleasejs';
 
 const SERVICE_ID = 'service:form-picker';
 
-const formNames = ['circle', 'square', 'triangle', 'rightangle', 'cross'];
+const formNames = ['circle', 'semicircle', 'square', 'cross', 'triangle', 'rightangle'];
 
 const template = `
   <div class="section-top flex-middle">
-    <p class="small">Choose your form</p>
+    <p class="small">choose your form</p>
   </div>
   <div class="section-center flex-center">
     <div class="form-wrapper">
@@ -35,8 +35,6 @@ class FormPickerView extends SegmentedView {
     for (let i = 0; i < formNames.length; i++) {
       const $form = $forms[i];
       const name = formNames[i];
-
-      $form.innerHTML = name;
       $form.setAttribute('data-form', name);
     }
   }
@@ -46,7 +44,7 @@ class FormPickerView extends SegmentedView {
 
     const numX = 2;
     const numY = 3;
-    const size = Math.min((width - 20) / numX, (height - 20) / numY);
+    const size = Math.min((width - 20) / numX, (0.85 * height - 20) / numY);
 
     this.$forms.forEach(($form) => {
       $form.style.width = `${size}px`;

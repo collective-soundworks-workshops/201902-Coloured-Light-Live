@@ -5,7 +5,7 @@ const SERVICE_ID = 'service:color-picker';
 
 const template = `
   <div class="section-top flex-middle">
-    <p class="small">Choose your color</p>
+    <p class="small">choose your color</p>
   </div>
   <div class="section-center flex-center">
     <div class="color-wrapper">
@@ -45,7 +45,7 @@ class ColorPickerView extends SegmentedView {
 
     const numX = 2;
     const numY = 3;
-    const size = Math.min((width - 20) / numX, (height - 20) / numY);
+    const size = Math.min((width - 20) / numX, (0.85 * height - 20) / numY);
 
     this.$circles.forEach(($circle) => {
       $circle.style.width = `${size}px`;

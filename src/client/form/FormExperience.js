@@ -11,15 +11,13 @@ const deg360 = 2 * Math.PI;
 const template = `
   <canvas class="background"></canvas>
   <div class="foreground">
-    <div class="section-top flex-middle"></div>
-    <div class="section-center flex-center">
-      <p class="big"><%= title %></p>
+    <div class="section-top flex-middle">
+      <p class="small">form</p>
     </div>
+    <div class="section-center flex-center"></div>
     <div class="section-bottom flex-middle"></div>
   </div>
 `;
-
-const model = { title: `` };
 
 class Point {
   constructor(x = 0, y = 0) {
@@ -61,8 +59,11 @@ class FormExperience extends soundworks.Experience {
     this.colorPicker = this.require('form-picker');
     this.sharedParams = this.require('shared-params');
 
+    this.touchX = 0;
+    this.touchY = 0;
     this.touch1 = new TouchPoint();
     this.touch1Angle = 0;
+    this.touch1Shutter = null;
     this.touch2 = new TouchPoint();
     this.touch2Dist = 0;
     this.touch2Angle = 0;
@@ -76,15 +77,21 @@ class FormExperience extends soundworks.Experience {
     this.onTouchStart = this.onTouchStart.bind(this);
     this.onTouchMove = this.onTouchMove.bind(this);
     this.onTouchEnd = this.onTouchEnd.bind(this);
+    this.updatePlayingMode = this.updatePlayingMode.bind(this);
     this.updateFormRatio = this.updateFormRatio.bind(this);
   }
 
   start() {
     super.start();
 
-    this.view = new soundworks.CanvasView(template, model, {}, {
+    this.view = new soundworks.CanvasView(template, {}, {}, {
       id: this.id,
       preservePixelRatio: true,
+      ratios: {
+        '.section-top': 0.12,
+        '.section-center': 0.85,
+        '.section-bottom': 0.03,
+      },
     });
 
     this.show().then(() => {
@@ -102,8 +109,11 @@ class FormExperience extends soundworks.Experience {
       surface.addListener('touchstart', this.onTouchStart);
       surface.addListener('touchmove', this.onTouchMove);
       surface.addListener('touchend', this.onTouchEnd);
-
       this.surface = surface;
+
+      this.sharedParams.addParamListener('playingMode', this.updatePlayingMode);
+      this.sharedParams.addParamListener('formRatio', this.updateFormRatio);
+      this.sharedParams.addParamListener('reload', () => window.location.reload(true));
 
       const coords = new Point();
       coords.randomize();
@@ -111,8 +121,6 @@ class FormExperience extends soundworks.Experience {
       this.send('add-form', client.index, client.form, coords.x, coords.y, this.size, this.shutterIncl, this.leftShutter, this.rightShutter);
       this.coords = coords;
     });
-
-    this.sharedParams.addParamListener('reload', () => window.location.reload(true));
   }
 
   normCoords(absX, absY) {
@@ -152,9 +160,9 @@ class FormExperience extends soundworks.Experience {
     }
   }
 
-  setSizeAndRotation(x, y, firstTouch, end) {
+  setSizeAndRotation(x, y, isTouch1, end) {
     const coords = this.normCoords(x, y);
-    const touch = (firstTouch) ? this.touch1 : this.touch2;
+    const touch = (isTouch1) ? this.touch1 : this.touch2;
 
     touch.coords = coords;
 
@@ -197,10 +205,10 @@ class FormExperience extends soundworks.Experience {
       this.shutterIncl = incl;
   }
 
-  setLeftShutter(x, end) {
-    const start = this.touch1.coords.x;
+  setLeftShutter(x, touch, end) {
+    const start = touch.coords.x;
     const normX = this.normX(x);
-    const dist = Math.max(0, Math.min(1.333, this.leftShutter - 6 * (normX - start) / this.size));
+    const dist = Math.max(0, Math.min(1.41, this.leftShutter - 6 * (normX - start) / this.size));
 
     this.renderer.setLeftShutter(dist);
     this.send('left-shutter', client.index, dist);
@@ -209,10 +217,10 @@ class FormExperience extends soundworks.Experience {
       this.leftShutter = dist;
   }
 
-  setRightShutter(x, end) {
-    const start = this.touch1.coords.x;
+  setRightShutter(x, touch, end) {
+    const start = touch.coords.x;
     const normX = this.normX(x);
-    const dist = Math.max(0, Math.min(1.333, this.rightShutter + 6 * (normX - start) / this.size));
+    const dist = Math.max(0, Math.min(1.41, this.rightShutter + 6 * (normX - start) / this.size));
 
     this.renderer.setRightShutter(dist);
     this.send('right-shutter', client.index, dist);
@@ -221,96 +229,172 @@ class FormExperience extends soundworks.Experience {
       this.rightShutter = dist;
   }
 
+  resetTouch(id, x, y, mode, isTouch1) {
+    switch (mode) {
+      case 'move':
+        this.setPosition(x, y, true);
+        break;
+      case 'resize':
+        this.setSizeAndRotation(x, y, isTouch1, true);
+        break;
+      case 'shutter-incl':
+        this.setShutterIncl(x, y, true);
+        break;
+      case 'left-shutter':
+        this.setLeftShutter(x, this.touch1, true);
+        break;
+      case 'right-shutter':
+        this.setRightShutter(x, this.touch1, true);
+        break;
+      case 'left-right-shutter':
+        if (isTouch1 && this.touch1Shutter === 'left-shutter') {
+          this.setLeftShutter(x, this.touch1, true);
+        } else if (!isTouch1 && this.touch1Shutter === 'right-shutter') {
+          this.setLeftShutter(x, this.touch2, true);
+        } else if (isTouch1 && this.touch1Shutter === 'right-shutter') {
+          this.setRightShutter(x, this.touch1, true);
+        } else if (!isTouch1 && this.touch1Shutter === 'left-shutter') {
+          this.setRightShutter(x, this.touch2, true);
+        }
+        break;
+    }
+  }
+
   onTouchStart(id, x, y) {
+    const playingMode = this.renderer.playingMode;
     const coords = this.normCoords(x, y);
 
-    if (this.touch1.id === null) {
-      const dist = this.coords.distance(coords);
+    if (playingMode !== 'off') {
       const shutterLineDistance = coords.x + coords.y * Math.tan(this.shutterIncl);
-      const inShutterArea = (coords.y > -0.5 && coords.y < 0.5);
-      let mode = null;
+      let mode = this.renderer.interactionMode;
 
-      if (dist < 0.1 * this.size) {
-        mode = 'move';
-      } else if (inShutterArea) {
-        if (Math.abs(shutterLineDistance) < 0.07) {
-          mode = 'shutter-incl';
-        } else if (shutterLineDistance < 0) {
+      if (this.touch1.id === null) {
+        const dist = this.coords.distance(coords);
+
+        if (playingMode === 'rehearsal' && dist < 0.1) {
+          mode = 'move';
+        } else if (playingMode === 'performance') {
+          if (Math.abs(shutterLineDistance) < 0.07) {
+            mode = 'shutter-incl';
+          } else if (shutterLineDistance < 0) {
+            mode = this.touch1Shutter = 'left-shutter';
+          } else {
+            mode = this.touch1Shutter = 'right-shutter';
+          }
+        }
+
+        this.touch1.id = id;
+        this.touch1.coords = coords;
+        this.touch1Angle = Math.atan2(coords.y, coords.x);
+
+        this.renderer.interactionMode = mode;
+      } else if (this.touch2.id === null) {
+        if (playingMode === 'rehearsal') {
+          this.resetTouch(id, this.touchX, this.touchY, mode, true);
+          mode = 'resize';
+        } else if (playingMode === 'performance') {
+          if ((mode === 'left-shutter' && shutterLineDistance >= 0) ||
+            (mode === 'right-shutter' && shutterLineDistance < 0)) {
+            mode = 'left-right-shutter';
+          }
+        }
+
+        if (mode !== this.renderer.interactionMode) {
+          this.touch2.id = id;
+          this.touch2.coords = coords;
+          this.touch2Dist = this.touch1.coords.distance(coords);
+          this.touch2Angle = this.touch1.coords.angle(coords);
+
+          this.renderer.interactionMode = mode;
+        }
+      }
+    }
+
+    this.touchX = x;
+    this.touchY = y;
+  }
+
+  onTouchMove(id, x, y) {
+    if (id === this.touch1.id || id === this.touch2.id) {
+      const isTouch1 = (id === this.touch1.id);
+
+      switch (this.renderer.interactionMode) {
+        case 'move':
+          this.setPosition(x, y, false);
+          break;
+        case 'resize':
+          this.setSizeAndRotation(x, y, isTouch1, false);
+          break;
+        case 'shutter-incl':
+          this.setShutterIncl(x, y, false);
+          break;
+        case 'left-shutter':
+          this.setLeftShutter(x, this.touch1, false);
+          break;
+        case 'right-shutter':
+          this.setRightShutter(x, this.touch1, false);
+          break;
+        case 'left-right-shutter':
+          if (isTouch1 && this.touch1Shutter === 'left-shutter') {
+            this.setLeftShutter(x, this.touch1, false);
+          } else if (!isTouch1 && this.touch1Shutter === 'right-shutter') {
+            this.setLeftShutter(x, this.touch2, false);
+          } else if (isTouch1 && this.touch1Shutter === 'right-shutter') {
+            this.setRightShutter(x, this.touch1, false);
+          } else if (!isTouch1 && this.touch1Shutter === 'left-shutter') {
+            this.setRightShutter(x, this.touch2, false);
+          }
+          break;
+      }
+    }
+
+    this.touchX = x;
+    this.touchY = y;
+  }
+
+  onTouchEnd(id, x, y) {
+    if (id === this.touch1.id || id === this.touch2.id) {
+      const isTouch1 = (id === this.touch1.id);
+      let mode = this.renderer.interactionMode;
+
+      this.resetTouch(id, x, y, mode, isTouch1);
+
+      if (mode !== 'left-right-shutter') {
+        this.touch1.id = null;
+        this.touch2.id = null;
+        mode = null;
+      } else if (isTouch1) {
+        const touch2 = this.touch1;
+        touch2.id = null;
+
+        this.touch1 = this.touch2;
+        this.touch2 = touch2;
+
+        if (this.touch1Shutter === 'left-shutter') {
+          mode = this.touch1Shutter = 'right-shutter';
+        } else {
+          mode = this.touch1Shutter = 'left-shutter';
+        }
+      } else {
+        this.touch2.id = null;
+
+        if (this.touch1Shutter === 'left-shutter') {
           mode = 'left-shutter';
         } else {
           mode = 'right-shutter';
         }
       }
 
-      this.renderer.mode = mode;
-
-      this.touch1.id = id;
-      this.touch1.coords = coords;
-      this.touch1Angle = Math.atan2(coords.y, coords.x);
-    } else if (this.touch2.id === null) {
-      this.renderer.mode = 'resize';
-
-      this.touch2.id = id;
-      this.touch2.coords = coords;
-      this.touch2Dist = this.touch1.coords.distance(coords);
-      this.touch2Angle = this.touch1.coords.angle(coords);
+      this.renderer.interactionMode = mode;
     }
   }
 
-  onTouchMove(id, x, y) {
-    if (id === this.touch1.id || id === this.touch2.id) {
-      switch (this.renderer.mode) {
-        case 'move':
-          this.setPosition(x, y, false);
-          break;
-        case 'resize':
-          const firstTouch = (id === this.touch1.id);
-          this.setSizeAndRotation(x, y, firstTouch, false);
-          break;
-        case 'shutter-incl':
-          this.setShutterIncl(x, y, false);
-          break;
-        case 'left-shutter':
-          this.setLeftShutter(x, false);
-          break;
-        case 'right-shutter':
-          this.setRightShutter(x, false);
-          break;
-      }
-    }
-  }
-
-  onTouchEnd(id, x, y) {
-    if (id === this.touch1.id || id === this.touch2.id) {
-      switch (this.renderer.mode) {
-        case 'move':
-          this.setPosition(x, y, true);
-          break;
-        case 'resize':
-          const firstTouch = (id === this.touch1.id);
-          this.setSizeAndRotation(x, y, firstTouch, true);
-          break;
-        case 'shutter-incl':
-          this.setShutterIncl(x, y, true);
-          break;
-        case 'left-shutter':
-          this.setLeftShutter(x, true);
-          break;
-        case 'right-shutter':
-          this.setRightShutter(x, true);
-          break;
-      }
-
-      this.renderer.showShutterLine = false;
-
-      this.touch1.id = null;
-      this.touch2.id = null;
-      this.renderer.mode = null;
-    }
+  updatePlayingMode(value) {
+    this.renderer.playingMode = value;
   }
 
   updateFormRatio(value) {
-    this.renderer.projectionParams.formRatio = value;
+    this.renderer.formRatio = value;
   }
 }
 

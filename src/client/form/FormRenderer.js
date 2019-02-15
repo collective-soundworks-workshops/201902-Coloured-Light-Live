@@ -9,14 +9,9 @@ class FormRenderer extends Canvas2dRenderer {
     this.square = new Square();
     this.form = new Form(type);
 
-    this.projectionParams = {
-      formRatio: 0.1,
-      directIntensity: 0.4,
-      strayIntensity: 0.2,
-      screenDistance: 0.1,
-    };
-
-    this.mode = null;
+    this.formRatio = 0.1;
+    this.playingMode = 'off';
+    this.interactionMode = null;
   }
 
   onResize(canvasWidth, canvasHeight, orientation) {
@@ -62,11 +57,20 @@ class FormRenderer extends Canvas2dRenderer {
   render(ctx) {
     const square = this.square;
     const form = this.form;
-    const formRatio = this.projectionParams.formRatio;
+    const formRatio = this.formRatio;
 
-    form.renderInterface(ctx, square, 1/3, this.mode);
-    form.renderBorder(ctx, square, formRatio, '#888', 0.8);
-    form.renderResult(ctx, square, formRatio, '#fff', 0.8);
+    switch (this.playingMode) {
+      case 'off':
+        break;
+
+      case 'rehearsal':
+        form.renderResult(ctx, square, formRatio, '#fff', 0.8, false);
+        break;
+
+      case 'performance':
+        form.renderInterface(ctx, square, 1 / 3, this.interactionMode);
+        break;
+    }
   }
 }
 

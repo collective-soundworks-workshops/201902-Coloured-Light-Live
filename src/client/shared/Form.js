@@ -4,11 +4,38 @@ function renderCircle(ctx, size) {
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
 }
 
+function renderSemicircle(ctx, size) {
+  const radius = 0.5 * size;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI);
+  ctx.closePath();
+}
+
 function renderSquare(ctx, size) {
   const width = size * 0.886226925452758; // 0.5 * sqrt(PI)
   const offset = -0.5 * width;
   ctx.beginPath();
   ctx.rect(offset, offset, width, width);
+}
+
+function renderCross(ctx, size) {
+  const radius = 0.5 * size;
+  const corner = 0.125 * size;
+  ctx.beginPath();
+  ctx.moveTo(-corner, -radius);
+  ctx.lineTo(-corner, -corner);
+  ctx.lineTo(-radius, -corner);
+  ctx.lineTo(-radius, corner);
+  ctx.lineTo(-radius, corner);
+  ctx.lineTo(-corner, corner);
+  ctx.lineTo(-corner, radius);
+  ctx.lineTo(corner, radius);
+  ctx.lineTo(corner, corner);
+  ctx.lineTo(radius, corner);
+  ctx.lineTo(radius, -corner);
+  ctx.lineTo(corner, -corner);
+  ctx.lineTo(corner, -radius);
+  ctx.closePath();
 }
 
 function renderTriangle(ctx, size) {
@@ -30,26 +57,6 @@ function renderRightangle(ctx, size) {
   ctx.moveTo(xTop, yTop);
   ctx.lineTo(-radius, 0);
   ctx.lineTo(radius, 0);
-  ctx.closePath();
-}
-
-function renderCross(ctx, size) {
-  const radius = 0.5 * size;
-  const corner = 0.125 * size;
-  ctx.beginPath();
-  ctx.moveTo(-corner, -radius);
-  ctx.lineTo(-corner, -corner);
-  ctx.lineTo(-radius, -corner);
-  ctx.lineTo(-radius, corner);
-  ctx.lineTo(-radius, corner);
-  ctx.lineTo(-corner, corner);
-  ctx.lineTo(-corner, radius);
-  ctx.lineTo(corner, radius);
-  ctx.lineTo(corner, corner);
-  ctx.lineTo(radius, corner);
-  ctx.lineTo(radius, -corner);
-  ctx.lineTo(corner, -corner);
-  ctx.lineTo(corner, -radius);
   ctx.closePath();
 }
 
@@ -93,17 +100,20 @@ class Form {
       case 'circle':
         renderCircle(ctx, scale * this.size);
         break;
+      case 'semicircle':
+        renderSemicircle(ctx, scale * this.size);
+        break;
       case 'square':
         renderSquare(ctx, scale * this.size);
+        break;
+      case 'cross':
+        renderCross(ctx, scale * this.size);
         break;
       case 'triangle':
         renderTriangle(ctx, scale * this.size);
         break;
       case 'rightangle':
         renderRightangle(ctx, scale * this.size);
-        break;
-      case 'cross':
-        renderCross(ctx, scale * this.size);
         break;
     }
 
@@ -151,17 +161,19 @@ class Form {
     ctx.scale(square.size, square.size);
     ctx.globalCompositeOperation = 'source-over';
 
+    // draw form at position
     ctx.fillStyle = (mode === 'resize') ? '#fff' : '#aaa';
     ctx.globalAlpha = 0.5;
     ctx.rotate(this.rotation);
     this.renderCore(ctx, scale, true);
+
     ctx.rotate(-this.rotation);
 
-    ctx.fillStyle = (mode === 'left-shutter') ? '#444' : '#222';
+    ctx.fillStyle = (mode === 'left-shutter' || mode === 'left-right-shutter') ? '#444' : '#222';
     ctx.globalAlpha = 0.8;
     this.renderShutter(ctx, scale, 'left');
 
-    ctx.fillStyle = (mode === 'right-shutter') ? '#444' : '#222';
+    ctx.fillStyle = (mode === 'right-shutter' || mode === 'left-right-shutter') ? '#444' : '#222';
     this.renderShutter(ctx, scale, 'right');
 
     ctx.strokeStyle = (mode === 'shutter-incl') ? '#fff' : '#aaa';
@@ -172,7 +184,7 @@ class Form {
     ctx.restore();
   }
 
-  renderResultAtPosition(ctx, square, x, y, scale, color, opacity) {
+  renderResultAtPosition(ctx, square, x, y, scale, color, opacity, drawShutters = true) {
     ctx.save();
 
     ctx.globalCompositeOperation = 'screen';
@@ -180,18 +192,22 @@ class Form {
     ctx.translate(x, y);
     ctx.scale(square.size, square.size);
 
-    const shutterAngle = Math.atan(this.shutterIncl);
-    ctx.rotate(shutterAngle);
+    if (drawShutters) {
+      const shutterAngle = Math.atan(this.shutterIncl);
+      ctx.rotate(shutterAngle);
 
-    const adapt = 0.5 * scale * this.size;
-    const left = -adapt * this.leftShutter;
-    const width = adapt * (this.leftShutter + this.rightShutter);
+      const adapt = 0.5 * scale * this.size;
+      const left = -adapt * this.leftShutter;
+      const width = adapt * (this.leftShutter + this.rightShutter);
 
-    ctx.beginPath();
-    ctx.rect(left, -0.5, width, 1);
-    ctx.clip();
+      ctx.beginPath();
+      ctx.rect(left, -0.5, width, 1);
+      ctx.clip();
 
-    ctx.rotate(this.rotation - shutterAngle);
+      ctx.rotate(-shutterAngle);
+    }
+
+    ctx.rotate(this.rotation);
 
     ctx.fillStyle = color;
     ctx.globalAlpha = opacity;
@@ -200,11 +216,11 @@ class Form {
     ctx.restore();
   }
 
-  renderResult(ctx, square, scale, color, opacity) {
+  renderResult(ctx, square, scale, color, opacity, drawShutters = true) {
     const x = square.getX(this.x);
     const y = square.getY(this.y);
 
-    this.renderResultAtPosition(ctx, square, x, y, scale, color, opacity);
+    this.renderResultAtPosition(ctx, square, x, y, scale, color, opacity, drawShutters);
   }
 
   renderBorder(ctx, square, scale, color, opacity) {

@@ -26,28 +26,13 @@
 
 #light {}
 
-#display {}
+#form {}
 
-#overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-
-  div {
-    position: absolute;
-    top: 60%;
-    left: 10%;
-    width: 80%;
-  }
-
-  a {
-    font-size: 32px;
-    color: yellow;
-    text-decoration: none;
-    text-align: center;
-
-    &:visited {
-      color: yellow;
+#display {
+  .url {
+    p {
+      font-size: 24pt;
+      line-height: 2em;
     }
   }
 }
@@ -63,7 +48,7 @@
     .circle {
       flex-basis: auto;
       border-radius: 50%;
-      border: 2px solid #000000;
+      border: 10px solid #000000;
       box-sizing: border-box;
     }
 
@@ -99,8 +84,18 @@
         background-size: contain;
       }
 
+      &[data-form="semicircle"] {
+        background: url(../images/form-semicircle.png) 50% 50% no-repeat;
+        background-size: contain;
+      }
+
       &[data-form="square"] {
         background: url(../images/form-square.png) 50% 50% no-repeat;
+        background-size: contain;
+      }
+
+      &[data-form="cross"] {
+        background: url(../images/form-cross.png) 50% 50% no-repeat;
         background-size: contain;
       }
 
@@ -113,17 +108,6 @@
         background: url(../images/form-rightangle.png) 50% 50% no-repeat;
         background-size: contain;
       }
-
-      &[data-form="cross"] {
-        background: url(../images/form-cross.png) 50% 50% no-repeat;
-        background-size: contain;
-      }
     }
-  }
-
-  .shadow {
-    background-size: contain;
-    border-color: white;
-    opacity: 0.9;
   }
 }
