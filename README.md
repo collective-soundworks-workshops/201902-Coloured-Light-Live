@@ -16,4 +16,4 @@ To run the application:
 
 The port used by default is `8000`.
 
-While the *display* client is meant to be projected on a large screen. Participants may open a *light* or *form* client on their mobile device (after the *display* client). The *controller* client allows for enabling the application in two modes *rehearsal* and *performance* (usually one after the other) and for controlling various parameters of teh application.
+While the *display* client is meant to be projected on a large screen. Participants may open a *light* or *form* client on their mobile device (after the *display* client). The *controller* client allows for enabling the application in two modes, *rehearsal* and *performance*, (usually one after the other) and for controlling various parameters of the application.
